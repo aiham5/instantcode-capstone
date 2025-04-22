@@ -1,0 +1,100 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  username  String   @unique
+  email     String   @unique
+  password  String
+  bio       String?
+  image     String?
+  role      String   @default("user") // "user" | "admin"
+  createdAt DateTime @default(now())
+
+  posts    Post[]
+  comments Comment[]
+  likes    Like[]
+
+  friends      Friend[]       @relation("UserFriends")
+  addedBy      Friend[]       @relation("FriendAddedBy")
+  Report       Report[]
+  Notification Notification[]
+}
+
+model Post {
+  id        Int      @id @default(autoincrement())
+  image     String
+  caption   String
+  createdAt DateTime @default(now())
+
+  user   User @relation(fields: [userId], references: [id])
+  userId Int
+
+  comments Comment[]
+  likes    Like[]
+  Report   Report[]
+}
+
+model Comment {
+  id        Int      @id @default(autoincrement())
+  content   String
+  createdAt DateTime @default(now())
+
+  user   User @relation(fields: [userId], references: [id])
+  userId Int
+
+  post   Post @relation(fields: [postId], references: [id])
+  postId Int
+
+  likes Like[]
+}
+
+model Like {
+  id Int @id @default(autoincrement())
+
+  user   User @relation(fields: [userId], references: [id])
+  userId Int
+
+  post   Post? @relation(fields: [postId], references: [id])
+  postId Int?
+
+  comment   Comment? @relation(fields: [commentId], references: [id])
+  commentId Int?
+}
+
+model Friend {
+  id Int @id @default(autoincrement())
+
+  user   User @relation("UserFriends", fields: [userId], references: [id])
+  userId Int
+
+  addedBy   User @relation("FriendAddedBy", fields: [addedById], references: [id])
+  addedById Int
+
+  createdAt DateTime @default(now())
+}
+
+model Report {
+  id        Int      @id @default(autoincrement())
+  reason    String
+  post      Post     @relation(fields: [postId], references: [id])
+  postId    Int
+  user      User     @relation(fields: [userId], references: [id])
+  userId    Int
+  createdAt DateTime @default(now())
+}
+
+model Notification {
+  id        Int      @id @default(autoincrement())
+  message   String
+  user      User     @relation(fields: [userId], references: [id])
+  userId    Int
+  createdAt DateTime @default(now())
+  read      Boolean  @default(false)
+}
