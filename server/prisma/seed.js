@@ -7,6 +7,7 @@ async function main() {
   await prisma.comment.deleteMany();
   await prisma.friend.deleteMany();
   await prisma.post.deleteMany();
+  await prisma.notification.deleteMany();
   await prisma.user.deleteMany();
 
   const users = [];

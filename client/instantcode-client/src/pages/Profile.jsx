@@ -39,6 +39,11 @@ export default function Profile() {
     fetchUser();
   }, [id]);
 
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    window.location.href = "/";
+  };
+
   if (loading) return <Loader />;
   if (!profile) return <p>User not found</p>;
 
@@ -54,9 +59,25 @@ export default function Profile() {
         <h2 style={{ marginTop: "10px" }}>{profile.username}</h2>
         <p>{profile.bio}</p>
         {user?.id === profile.id && (
-          <Link to={`/edit-profile`}>
-            <button style={{ marginTop: "10px" }}>Edit Profile</button>
-          </Link>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "center",
+              gap: "10px",
+              marginTop: "10px",
+            }}
+          >
+            <Link to={`/edit-profile`}>
+              <button className="edit-profile-btn">Edit Profile</button>
+            </Link>
+            <button
+              className="edit-profile-btn"
+              style={{ backgroundColor: "#f44336" }}
+              onClick={handleLogout}
+            >
+              Logout
+            </button>
+          </div>
         )}
       </div>
 

@@ -32,15 +32,37 @@ router.get("/", async (req, res) => {
   res.json({ posts, total });
 });
 
-router.get("/:id", async (req, res) => {
-  const post = await prisma.post.findUnique({
-    where: { id: parseInt(req.params.id) },
+router.get("/all", async (req, res) => {
+  const posts = await prisma.post.findMany({
+    orderBy: { createdAt: "desc" },
     include: {
       user: {
         select: {
           id: true,
           username: true,
-          image: true, // ✅ This line is critical
+          image: true,
+        },
+      },
+      likes: true,
+      comments: {
+        select: { id: true },
+      },
+    },
+  });
+
+  res.json(posts);
+});
+
+router.get("/:id", async (req, res) => {
+  const postId = parseInt(req.params.id);
+  const post = await prisma.post.findUnique({
+    where: { id: postId },
+    include: {
+      user: {
+        select: {
+          id: true,
+          username: true,
+          image: true,
         },
       },
       comments: {
@@ -49,7 +71,7 @@ router.get("/:id", async (req, res) => {
             select: {
               id: true,
               username: true,
-              image: true, // ✅ Comment author image
+              image: true,
             },
           },
           likes: true,
@@ -91,7 +113,6 @@ router.delete("/admin/:id", isLoggedIn, isAdmin, async (req, res) => {
     const post = await prisma.post.findUnique({ where: { id: postId } });
     if (!post) return res.status(404).json({ error: "Post not found" });
 
-    // 🔥 delete related data first to avoid constraint errors
     await prisma.comment.deleteMany({ where: { postId } });
     await prisma.like.deleteMany({ where: { postId } });
     await prisma.report.deleteMany({ where: { postId } });
@@ -102,6 +123,45 @@ router.delete("/admin/:id", isLoggedIn, isAdmin, async (req, res) => {
   } catch (err) {
     console.error("Admin delete error:", err);
     res.status(500).json({ error: "Failed to delete post" });
+  }
+});
+
+router.post("/", isLoggedIn, async (req, res) => {
+  const { image, caption } = req.body;
+
+  try {
+    const post = await prisma.post.create({
+      data: {
+        image,
+        caption,
+        userId: req.user.id,
+      },
+    });
+
+    const user = await prisma.user.findUnique({
+      where: { id: req.user.id },
+      select: { username: true },
+    });
+
+    const friends = await prisma.friend.findMany({
+      where: { userId: req.user.id },
+      select: { addedById: true },
+    });
+    const notifications = friends.map((friend) =>
+      prisma.notification.create({
+        data: {
+          userId: friend.addedById,
+          message: `${user.username} just posted something new.`,
+        },
+      })
+    );
+
+    await Promise.all(notifications);
+
+    res.status(201).json(post);
+  } catch (err) {
+    console.error("Post creation error:", err);
+    res.status(500).json({ error: "Failed to create post" });
   }
 });
 

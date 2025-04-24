@@ -16,18 +16,12 @@ export default function Home() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [page, setPage] = useState(1);
-  const [total, setTotal] = useState(0);
-  const limit = 5;
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const res = await axios.get(
-          `http://localhost:3000/api/posts?page=${page}&limit=${limit}`
-        );
-        setPosts(res.data.posts);
-        setTotal(res.data.total);
+        const res = await axios.get("http://localhost:3000/api/posts/all");
+        setPosts(res.data);
 
         const token = localStorage.getItem("token");
         if (token) {
@@ -52,7 +46,7 @@ export default function Home() {
     };
 
     fetchData();
-  }, [page]);
+  }, []);
 
   const handleLike = async (postId) => {
     const token = localStorage.getItem("token");
@@ -107,10 +101,8 @@ export default function Home() {
   };
 
   const reloadPosts = async () => {
-    const res = await axios.get(
-      `http://localhost:3000/api/posts?page=${page}&limit=${limit}`
-    );
-    setPosts(res.data.posts);
+    const res = await axios.get("http://localhost:3000/api/posts/all");
+    setPosts(res.data);
   };
 
   const filtered = posts.filter(
@@ -118,8 +110,6 @@ export default function Home() {
       post.caption.toLowerCase().includes(search.toLowerCase()) ||
       post.user.username.toLowerCase().includes(search.toLowerCase())
   );
-
-  const totalPages = Math.ceil(total / limit);
 
   if (loading) return <Loader />;
 
@@ -218,24 +208,6 @@ export default function Home() {
           </p>
         </div>
       ))}
-
-      <div style={{ marginTop: "20px", textAlign: "center" }}>
-        <button
-          onClick={() => setPage(Math.max(1, page - 1))}
-          disabled={page === 1}
-        >
-          Prev
-        </button>
-        <span style={{ margin: "0 10px" }}>
-          Page {page} of {totalPages}
-        </span>
-        <button
-          onClick={() => setPage(Math.min(totalPages, page + 1))}
-          disabled={page === totalPages}
-        >
-          Next
-        </button>
-      </div>
     </div>
   );
 }

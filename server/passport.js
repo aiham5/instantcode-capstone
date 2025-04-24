@@ -14,16 +14,38 @@ passport.use(
         let user = await prisma.user.findUnique({
           where: { email: profile.emails[0].value },
         });
+
         if (!user) {
-          user = await prisma.user.create({
-            data: {
-              email: profile.emails[0].value,
-              username: profile.displayName,
-              image: profile.photos[0].value,
-              password: "",
-            },
-          });
+          const email = profile.emails[0].value;
+          const baseUsername =
+            profile.displayName?.replace(/\s+/g, "").toLowerCase() || "user";
+          let username = baseUsername;
+          let suffix = 1;
+
+          while (true) {
+            try {
+              user = await prisma.user.create({
+                data: {
+                  email,
+                  username,
+                  image: profile.photos[0].value,
+                  password: "",
+                },
+              });
+              break;
+            } catch (err) {
+              if (
+                err.code === "P2002" &&
+                err.meta?.target?.includes("username")
+              ) {
+                username = `${baseUsername}${suffix++}`;
+              } else {
+                throw err;
+              }
+            }
+          }
         }
+
         done(null, user);
       } catch (err) {
         done(err, null);

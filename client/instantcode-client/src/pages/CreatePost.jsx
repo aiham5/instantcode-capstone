@@ -4,17 +4,50 @@ import axios from "axios";
 import toast from "react-hot-toast";
 
 export default function CreatePost() {
-  const [image, setImage] = useState("");
   const [caption, setCaption] = useState("");
+  const [file, setFile] = useState(null);
+  const [preview, setPreview] = useState(null);
   const navigate = useNavigate();
+
+  const handleUpload = async () => {
+    if (!file) {
+      toast.error("Please select an image to upload.");
+      return null;
+    }
+
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("upload_preset", "instantcode_upload");
+
+    try {
+      const res = await axios.post(
+        "https://api.cloudinary.com/v1_1/dz16kp2oz/image/upload",
+        formData
+      );
+      return res.data.secure_url;
+    } catch {
+      toast.error("Image upload failed.");
+      return null;
+    }
+  };
+
+  const extractTags = (text) => {
+    const matches = text.match(/#[a-zA-Z0-9_]+/g);
+    return matches ? matches.map((tag) => tag.slice(1).toLowerCase()) : [];
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    const imageUrl = await handleUpload();
+    if (!imageUrl) return;
+
+    const tags = extractTags(caption);
+
     try {
       const token = localStorage.getItem("token");
       await axios.post(
         "http://localhost:3000/api/posts",
-        { image, caption },
+        { image: imageUrl, caption, tags },
         {
           headers: { Authorization: `Bearer ${token}` },
         }
@@ -23,6 +56,18 @@ export default function CreatePost() {
       navigate("/");
     } catch {
       toast.error("Failed to create post.");
+    }
+  };
+
+  const handleFileChange = (e) => {
+    const selected = e.target.files[0];
+    setFile(selected);
+    if (selected) {
+      const reader = new FileReader();
+      reader.onloadend = () => setPreview(reader.result);
+      reader.readAsDataURL(selected);
+    } else {
+      setPreview(null);
     }
   };
 
@@ -40,19 +85,33 @@ export default function CreatePost() {
           style={{ display: "flex", flexDirection: "column", gap: "1rem" }}
         >
           <input
-            type="text"
-            placeholder="Image URL"
-            value={image}
-            onChange={(e) => setImage(e.target.value)}
+            type="file"
+            accept="image/*"
+            onChange={handleFileChange}
             required
             style={{
               padding: "10px",
               borderRadius: "8px",
+              backgroundColor: "var(--card)",
+              color: "var(--text)",
               border: "1px solid var(--border)",
             }}
           />
+          {preview && (
+            <img
+              src={preview}
+              alt="Preview"
+              style={{
+                width: "100%",
+                maxHeight: "300px",
+                objectFit: "cover",
+                borderRadius: "8px",
+                border: "1px solid var(--border)",
+              }}
+            />
+          )}
           <textarea
-            placeholder="Caption"
+            placeholder="Write a caption... Use #hashtags to tag your post"
             value={caption}
             onChange={(e) => setCaption(e.target.value)}
             required
